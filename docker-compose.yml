@@ -1,0 +1,11 @@
+---
+version: '3.7'
+services:
+  gyb:
+    build:
+      context: .
+    volumes:
+      - "${LOCAL_FOLDER}:/tmp/local_folder"
+    command:
+      - gyb
+      - --local-folder /tmp/local_folder
