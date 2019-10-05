@@ -1,11 +1,22 @@
 ---
 version: '3.7'
 services:
-  gyb:
+  gyb-without-project:
     build:
       context: .
     volumes:
       - "${LOCAL_FOLDER}:/tmp/local_folder"
     command:
-      - gyb
-      - --local-folder /tmp/local_folder
+      - --local-folder
+      - /tmp/local_folder
+  gyb:
+    build:
+      context: .
+    volumes:
+      - "${LOCAL_FOLDER}:/tmp/local_folder"
+      - "${CREDENTIALS_FOLDER}/client_secrets.json:/usr/local/bin/gyb/client_secrets.json"
+      - "${CREDENTIALS_FOLDER}/oauth2service.json:/usr/local/bin/gyb/oauth2service.json"
+      - "${CREDENTIALS_FOLDER}/email.cfg:/usr/local/bin/gyb/${EMAIL_ADDRESS}.cfg"
+    command:
+      - --local-folder
+      - /tmp/local_folder
