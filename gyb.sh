@@ -1,24 +1,62 @@
 #!/usr/bin/env bash
-GYB_SRC_DIRECTORY=$HOME/src/gyb
-GYB_SRC_URL=https://github.com/carlosonunez/gyb-docker
 
-clone_gyb_repo_if_not_present() {
-  if ! test -d "$GYB_SRC_DIRECTORY"
-  then
-    >&2 echo "INFO: gyb source dir not found; cloning."
-    pushd "$HOME/src"
-    git clone "$GYB_SRC_URL"
-    mv gyb-docker gyb
-    popd
-  fi
+usage() {
+  cat <<-USAGE
+gyb.sh (email_address) [gyb_commands]
+Runs a Dockerized instance of gyb.
+
+ARGUMENTS:
+
+  email_address       The email address to run gyb against.
+
+NOTES:
+
+- If you've set up GYB in the past and have a 'client_secrets.json' file,
+  copy it into the $HOME/.gyb/\${email_address}_credentials/ directory.
+USAGE
 }
 
-run_gyb_command() {
-  email_address="${1:-personal}"
-  export LOCAL_FOLDER="$HOME/.gyb/${email_address}"
-  mkdir -p "$LOCAL_FOLDER" 2>/dev/null
-  docker-compose -f "${GYB_SRC_DIRECTORY}/docker-compose.yml" run --rm gyb
-}
+if test -z "$1"
+then
+  usage
+  exit 1
+fi
+email_address="${1?Please provide an email address.}"
+shift
+export LOCAL_FOLDER="$HOME/.gyb/${email_address}"
+export CREDENTIALS_FOLDER="$HOME/.gyb/${email_address}_credentials"
+export EMAIL_ADDRESS="$email_address"
+mkdir -p "$LOCAL_FOLDER" 2>/dev/null
+mkdir -p "$CREDENTIALS_FOLDER" 2>/dev/null
+if ! test -f "${CREDENTIALS_FOLDER}/client_secrets.json"
+then
+  touch "${CREDENTIALS_FOLDER}/client_secrets.json"
+  touch "${CREDENTIALS_FOLDER}/email.cfg"
+  >&2 echo "INFO: You need to set up GYB. Let's do that first."
 
-clone_gyb_repo_if_not_present &&
-run_gyb_command
+  # We have to copy the client_secrets.json file out of the container because gyb
+  # refuses to create a new project if this file exists but Docker will create
+  # the file as a directory if the file used by the volume mount doesn't exist.
+  # https://github.com/jay0lee/got-your-back/blob/master/gyb.py#L911-L913
+  docker-compose -f "$(dirname $0)/docker-compose.yml" run gyb-without-project \
+    --email "${email_address}" \
+    --action create-project
+
+  docker ps | \
+    grep gyb-without-project | \
+    awk '{print $1}' | \
+    head -1 | \
+    xargs -I {} sh -c "docker start {} && \
+docker exec {} sh -c 'cat /usr/local/bin/gyb/client_secrets.json'" > "${CREDENTIALS_FOLDER}/client_secrets.json"
+
+  docker ps | \
+    grep gyb-without-project | \
+    awk '{print $1}' | \
+    head -1 | \
+    xargs -I {} sh -c "docker start {} && \
+docker exec {} sh -c 'cat /usr/local/bin/gyb/oauth2service.json' " > "${CREDENTIALS_FOLDER}/oauth2service.json"
+fi
+
+docker-compose -f "$(dirname $0)/docker-compose.yml" run --user root \
+  gyb \
+  "$(echo "./gyb --email ${email_address} --local-folder /tmp/local_folder ${@:1}" | base64 -)"

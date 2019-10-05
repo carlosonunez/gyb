@@ -10,6 +10,8 @@ RUN curl -o /tmp/gyb_install.sh -sSL https://git.io/gyb-install && chmod +x /tmp
 RUN /tmp/gyb_install.sh -l -d $GYB_INSTALL_PATH
 RUN chmod -R 755 $GYB_INSTALL_PATH
 
-USER nobody
+
 WORKDIR $GYB_INSTALL_PATH/gyb
-ENTRYPOINT [ "./gyb" ]
+COPY ./run_gyb.sh ./run_gyb.sh
+RUN chmod +x ./run_gyb.sh
+ENTRYPOINT [ "./run_gyb.sh" ]
