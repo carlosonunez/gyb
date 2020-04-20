@@ -38,18 +38,20 @@ then
   # refuses to create a new project if this file exists but Docker will create
   # the file as a directory if the file used by the volume mount doesn't exist.
   # https://github.com/jay0lee/got-your-back/blob/master/gyb.py#L911-L913
-  docker-compose -f "$(dirname $0)/docker-compose.yml" run gyb-without-project \
-    --email "${email_address}" \
-    --action create-project
+  docker-compose -f "$(dirname $0)/docker-compose.yml" run --user root \
+    gyb-without-project \
+      "$(echo "./gyb --email ${email_address} \
+--local-folder /tmp/local_folder \
+--action create-project" | base64 -)"
 
-  docker ps | \
+  docker ps -a | \
     grep gyb-without-project | \
     awk '{print $1}' | \
     head -1 | \
     xargs -I {} sh -c "docker start {} && \
 docker exec {} sh -c 'cat /usr/local/bin/gyb/client_secrets.json'" > "${CREDENTIALS_FOLDER}/client_secrets.json"
 
-  docker ps | \
+  docker ps -a | \
     grep gyb-without-project | \
     awk '{print $1}' | \
     head -1 | \
