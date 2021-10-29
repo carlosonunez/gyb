@@ -1,4 +1,4 @@
-FROM ubuntu:eoan
+FROM ubuntu:focal
 MAINTAINER Carlos Nunez <dev@carlosnunez.me>
 ENV GYB_INSTALL_PATH=/usr/local/bin
 
