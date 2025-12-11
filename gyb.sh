@@ -9,6 +9,10 @@ ARGUMENTS:
 
   email_address       The email address to run gyb against.
 
+ENVIRONMENT VARIABLES
+
+  REBUILD=false       Rebuild the gyb image.
+
 NOTES:
 
 - If you've set up GYB in the past and have a 'client_secrets.json' file,
@@ -67,6 +71,8 @@ docker exec {} sh -c 'cat /usr/local/bin/gyb/client_secrets.json'" > "${CREDENTI
     xargs -I {} sh -c "docker start {} && \
 docker exec {} sh -c 'cat /usr/local/bin/gyb/oauth2service.json' " > "${CREDENTIALS_FOLDER}/oauth2service.json"
 fi
+
+test -n "$REBUILD" && docker-compose -f "$(dirname "$0")/docker-compose.yml" build gyb
 
 docker-compose -f "$(dirname $0)/docker-compose.yml" run \
   --rm \
